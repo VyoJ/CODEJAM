@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field
 from fastapi import UploadFile
-from typing import List, Union, Literal, Optional, Dict , Any 
+from typing import List, Union, Literal, Optional, Dict, Any
 from enum import Enum
+
 
 class QuestionRequest(BaseModel):
     topic: str
@@ -41,14 +42,17 @@ class SubjectiveQuestion(BaseModel):
 class QuestionsResponse(BaseModel):
     questions: List[Union[MCQQuestion, SubjectiveQuestion]]
 
+
 class DifficultyLevel(str, Enum):
     EASY = "easy"
     MEDIUM = "medium"
     HARD = "hard"
 
+
 class TestCase(BaseModel):
     input: Dict[str, Any]  # Changed to Dict[str, Any] to handle various input types
     expected: Any  # Changed to Any to handle various output types
+
 
 class CodingQuestionRequest(BaseModel):
     programming_language: str
@@ -56,9 +60,11 @@ class CodingQuestionRequest(BaseModel):
     topic: Optional[str] = None
     num_questions: int = Field(default=1, ge=1, le=10)
 
+
 class QuestionDifficulty(BaseModel):
     level: str
     explanation: Optional[str] = None
+
 
 class CodingQuestion(BaseModel):
     title: str
@@ -75,16 +81,21 @@ class CodingQuestion(BaseModel):
     class Config:
         extra = "allow"  # Allow additional fields in the response
 
+
 class CodingQuestionsResponse(BaseModel):
     questions: List[CodingQuestion]
 
     class Config:
         extra = "allow"  # Allow additional fields in the response
 
+
 class CodingAnswerSubmission(BaseModel):
-    question: Dict[str, Any]  # Changed to Dict[str, Any] to handle various question formats
+    question: Dict[
+        str, Any
+    ]  # Changed to Dict[str, Any] to handle various question formats
     user_code: str
     programming_language: str
+
 
 class TestResult(BaseModel):
     passed: bool
@@ -92,6 +103,7 @@ class TestResult(BaseModel):
     expected: Any
     actual: Any
     error: Optional[str] = None
+
 
 class CodingEvaluationResponse(BaseModel):
     passed: bool

@@ -27,7 +27,7 @@ interface Question {
   type: "MCQ" | "Subjective";
   question: string;
   options?: string[];
-  correct_answer: string;
+  model_answer: string;
 }
 
 interface Evaluation {
@@ -83,7 +83,7 @@ export default function AssessmentPage() {
         {
           question: currentQuestion.question,
           user_answer: userAnswer,
-          correct_answer: currentQuestion.correct_answer,
+          correct_answer: currentQuestion.model_answer,
         }
       );
       setEvaluation(response.data);
@@ -186,7 +186,7 @@ export default function AssessmentPage() {
               <h3 className="text-lg font-semibold">
                 Question {currentQuestionIndex + 1} of {questions.length}
               </h3>
-              <p className="mt-1 p-4 bg-gray-100 rounded-md">
+              <p className="mt-1 p-4 rounded-md">
                 {questions[currentQuestionIndex].question}
               </p>
               <div className="space-y-2">
