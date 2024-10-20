@@ -137,6 +137,25 @@ export default function AssessmentPage() {
                 className="border-cyan-200 dark:border-cyan-700 focus:ring-cyan-500 dark:focus:ring-cyan-400"
               />
             </div>
+            <div>
+          <Label htmlFor="file-upload">Upload File (Optional)</Label>
+          <div className="flex items-center space-x-2">
+            <Input
+              id="file-upload"
+              type="file"
+              className="hidden"
+            />
+            <Button
+              type="button"
+              onClick={() => document.getElementById('file-upload')?.click()}
+              variant="outline"
+              className="bg-[#2a3441] border-[#3f4b5b] text-[#7dd3fc] hover:bg-[#3f4b5b]"
+            >
+              Choose File
+            </Button>
+            
+          </div>
+        </div>
             <div className="space-y-2">
               <Label className="text-cyan-700 dark:text-cyan-300">
                 Question Type
