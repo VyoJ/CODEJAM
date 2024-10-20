@@ -69,7 +69,7 @@ def initialize_generator_agent(index):
     - Generate questions with 4 options each (A, B, C, D).
     - Provide the correct answer for each question.
     For Subjective Questions:
-    - Generate questions that require detailed answers.
+    - Generate questions for the student to provide detailed answer.
     - Provide a model answer for each question."""
     agent = ReActAgent.from_tools(tools, memory=memory, system_prompt=custom_prompt)
     return agent
@@ -81,8 +81,23 @@ def generate_questions(agent, topic, question_type, num_questions):
     - Generate questions with 4 options each (A, B, C, D).
     - Provide the correct answer for each question.
     For Subjective Questions:
-    - Generate questions that require detailed answers.
-    - Provide a model answer for each question."""
+    - Generate questions for the student to provide detailed answer using Bloom's Taxonomy  .
+    - Bloom's Taxonomy has 6 layers which inlcudes ("Remember/Knowledge","Understand/Comprehension","Apply","Analyze","Evaluate","Create")
+    - Here is what each layer means with some examples:
+    - 1st Layer - "Remember/Knowledge"  - Recall facts and basic concepts (define , identify , describe , recognize , tell , explain , recite , memorize , illustrate , quote)
+    - Example questions : [What is…?   Who were the main…?  Where is…?  How would you explain…? How would you know…?    ]
+    - 2nd Layer - "Understand/Comprehension" - Understanding what the fact means (summarize , interpret , classify , compare , contrast , infer , relate , extract , paraphrase , cite )
+    - Example questions : [What does… mean?   What is the main idea of…?    How would you summarize…?]
+    - 3rd Layer - "Apply" - Use the facts to solve a problem (solve , change , relate , complete , use , sketch , teach , articulate , discover , transfer )
+    - Example questions : [How would you use… to solve…?   How would you apply?   What would result if…?   Can you make use of the facts to…?]
+    - 4th Layer - "Analyze" - Break down the facts into smaller parts (contrast , connect , relate , devise , correlate , illustrate , distill , conclude , categorize , take apart )
+    - Example questions : [What are the similarities and differences between…?   What is the relationship between…?  What inference can you make…?]
+    - 5th Layer - "Evaluate" - Make a judgment about the facts (critcize , reframe , judge , defend , appraise, value , prioritze , plan , grade , reframe)
+    - Example questions : [What are the strengths and weaknesses of…?   What are the advantages?   What could be combined to improve/change…? Can you formulate a theory for…?  ] 
+    - 6th Layer - "Create" - Make something new using the facts (design , modify , role-play , develop , rewrite , pivot , modify , collaborate , invent , write)
+    - Example questions : [What would happen if…?   What would you do if…?  How would you prioritize…?  What judgment would you make about…?]
+    - Provide a model answer for each generated question.
+."""
 
     try:
         response = agent.chat(prompt)
