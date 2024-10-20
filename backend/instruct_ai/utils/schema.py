@@ -13,7 +13,7 @@ class QuestionRequest(BaseModel):
 class AnswerSubmission(BaseModel):
     question: str
     user_answer: str
-    correct_answer: str
+    model_answer: str
 
 
 class EvaluationResponse(BaseModel):
@@ -30,13 +30,13 @@ class MCQQuestion(BaseModel):
     type: str = Literal["MCQ"]
     question: str
     options: List[str]
-    correct_answer: str
+    model_answer: str
 
 
 class SubjectiveQuestion(BaseModel):
     type: str = Literal["Subjective"]
     question: str
-    correct_answer: str
+    model_answer: str
 
 
 class QuestionsResponse(BaseModel):

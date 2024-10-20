@@ -78,12 +78,13 @@ export default function AssessmentPage() {
     setLoading(true);
     try {
       const currentQuestion = questions[currentQuestionIndex];
+      console.log("currentQuestion", currentQuestion);
       const response = await axios.post(
         "http://localhost:8000/evaluate_answer",
         {
           question: currentQuestion.question,
           user_answer: userAnswer,
-          correct_answer: currentQuestion.model_answer,
+          model_answer: currentQuestion.model_answer,
         }
       );
       setEvaluation(response.data);

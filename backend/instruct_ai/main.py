@@ -36,7 +36,7 @@ index = VectorStoreIndex.from_documents(documents, storage_context=storage_conte
 generator_agent = initialize_generator_agent(index)
 
 
-@app.post("/generate_questions")
+@app.post("/generate_questions", response_model=QuestionsResponse)
 async def api_generate_questions(request: QuestionRequest):
     questions = generate_questions(
         generator_agent, request.topic, request.question_type, request.num_questions
@@ -47,7 +47,7 @@ async def api_generate_questions(request: QuestionRequest):
 @app.post("/evaluate_answer", response_model=EvaluationResponse)
 async def api_evaluate_answer(submission: AnswerSubmission):
     evaluation = evaluate_answer(
-        submission.question, submission.user_answer, submission.correct_answer
+        submission.question, submission.user_answer, submission.model_answer
     )
     return evaluation
 

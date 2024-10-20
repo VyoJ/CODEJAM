@@ -14,7 +14,10 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { status } = useSession();
 
-  const navItems = [{ href: "/assessment", label: "Assessment Demo" }];
+  const navItems = [
+    { href: "/assessment", label: "Assessment Demo" },
+    { href: "/coding", label: "Coding Demo" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -98,7 +98,7 @@ def initialize_generator_agent(index):
                         "Option C text",
                         "Option D text"
                     ],
-                    "correct_answer": "Correct option letter"
+                    "model_answer": "Correct option letter"
                 }},
                 {{
                     "type": "Subjective",
@@ -119,7 +119,7 @@ def initialize_generator_agent(index):
 def generate_questions(agent, topic, question_type, num_questions):
     prompt = f"""Generate {num_questions} {question_type} questions about {topic}. 
     Your response must be a valid JSON object with a 'questions' key containing an array of question objects.
-    Each question object should have 'type', 'question', and either 'options' and 'correct_answer' for MCQs, or 'model_answer' for subjective questions.
+    Each question object should have 'type', 'question', and either 'options' and 'model_answer' for MCQs, or 'model_answer' for subjective questions.
     Ensure that your response is a properly formatted JSON object. Double-check the JSON structure before submitting.
     """
     response = agent.chat(prompt)
@@ -271,6 +271,116 @@ def validate_programming_language(language: str) -> str:
     return supported_languages[normalized]
 
 
+# def generate_coding_question(
+#     agent,
+#     programming_language: str,
+#     difficulty: DifficultyLevel,
+#     topic: Optional[str] = None,
+#     num_questions: int = 1,
+# ) -> Dict:
+#     """
+#     Generate coding questions with test cases and solution templates.
+
+#     Args:
+#         agent: The LLM agent to use for generation
+#         programming_language: Target programming language
+#         difficulty: DifficultyLevel (easy/medium/hard)
+#         topic: Specific programming topic (optional)
+#         num_questions: Number of questions to generate (default: 1)
+
+#     Returns:
+#         Dict containing generated questions with test cases
+
+#     Raises:
+#         HTTPException: If question generation or parsing fails
+#         ValueError: If input parameters are invalid
+#     """
+#     try:
+#         # Input validation
+#         if num_questions < 1 or num_questions > 10:
+#             raise ValueError("Number of questions must be between 1 and 10")
+
+#         programming_language = validate_programming_language(programming_language)
+#         difficulty_params = get_difficulty_parameters(difficulty)
+#         topic_prompt = f"about {topic}" if topic else ""
+
+#         prompt = f"""Generate {num_questions} {difficulty.value} coding {topic_prompt} questions in {programming_language}.
+#         The questions should align with the following difficulty parameters:
+#         - Time Complexity Target: {', '.join(difficulty_params.time_complexity)}
+#         - Typical Concepts: {', '.join(difficulty_params.typical_concepts)}
+#         - Expected Solving Time: {difficulty_params.expected_time}
+#         - Constraints: {json.dumps(difficulty_params.constraints, indent=2)}
+
+#         Your response must be a valid JSON object with a 'questions' key containing an array of question objects.
+#         Each question object should have:
+#         - 'title': A short descriptive title
+#         - 'difficulty': The difficulty level with explanation
+#         - 'description': Detailed problem description including constraints and examples
+#         - 'function_signature': The required function signature/template
+#         - 'test_cases': Array of test cases with input and expected output
+#         - 'solution': A sample solution
+#         - 'time_complexity': Expected time complexity
+#         - 'space_complexity': Expected space complexity
+#         - 'hints': Array of helpful hints (optional)
+#         - 'learning_points': Key concepts and patterns used in the solution
+
+#         Use appropriate syntax and conventions for {programming_language}.
+#         Include comprehensive test cases covering edge cases.
+#         """
+
+#         try:
+#             response = agent.chat(prompt)
+#         except Exception as e:
+#             raise HTTPException(
+#                 status_code=500, detail=f"Failed to generate questions: {str(e)}"
+#             )
+
+#         try:
+#             questions_data = json.loads(response.response)
+#         except json.JSONDecodeError:
+#             raise HTTPException(
+#                 status_code=500,
+#                 detail="Failed to parse the generated questions. Invalid JSON format.",
+#             )
+
+#         # Validate response structure
+#         if not isinstance(questions_data, dict) or "questions" not in questions_data:
+#             raise ValueError("Response is missing required 'questions' field")
+
+#         # Validate each question
+#         for question in questions_data["questions"]:
+#             required_fields = [
+#                 "title",
+#                 "difficulty",
+#                 "description",
+#                 "function_signature",
+#                 "test_cases",
+#                 "solution",
+#                 "time_complexity",
+#                 "space_complexity",
+#             ]
+#             missing_fields = [
+#                 field for field in required_fields if field not in question
+#             ]
+#             if missing_fields:
+#                 raise ValueError(
+#                     f"Question missing required fields: {', '.join(missing_fields)}"
+#                 )
+
+#             # if question["difficulty"]["level"] != difficulty.value:
+#             #     raise ValueError(
+#             #         f"Question difficulty '{question['difficulty']['level']}' "
+#             #         f"does not match requested level: {difficulty.value}"
+#             #     )
+
+#         return questions_data
+
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
 def generate_coding_question(
     agent,
     programming_language: str,
@@ -278,31 +388,36 @@ def generate_coding_question(
     topic: Optional[str] = None,
     num_questions: int = 1,
 ) -> Dict:
-    """
-    Generate coding questions with test cases and solution templates.
-
-    Args:
-        agent: The LLM agent to use for generation
-        programming_language: Target programming language
-        difficulty: DifficultyLevel (easy/medium/hard)
-        topic: Specific programming topic (optional)
-        num_questions: Number of questions to generate (default: 1)
-
-    Returns:
-        Dict containing generated questions with test cases
-
-    Raises:
-        HTTPException: If question generation or parsing fails
-        ValueError: If input parameters are invalid
-    """
     try:
-        # Input validation
         if num_questions < 1 or num_questions > 10:
             raise ValueError("Number of questions must be between 1 and 10")
 
         programming_language = validate_programming_language(programming_language)
         difficulty_params = get_difficulty_parameters(difficulty)
         topic_prompt = f"about {topic}" if topic else ""
+
+        # Create a sample test case structure
+        sample_test_case = {
+            "input": {"nums": [1, 2, 3, 4, 5], "target": 9},
+            "expected": [3, 4],
+        }
+
+        # Create a sample question structure
+        sample_question = {
+            "title": "Example: Find Target Sum Pair",
+            "difficulty": {
+                "level": "easy",
+                "explanation": "Basic array traversal with nested loops",
+            },
+            "description": "Example description",
+            "function_signature": "def find_pair(nums: List[int], target: int) -> List[int]:",
+            "test_cases": [sample_test_case],
+            "solution": "Example solution",
+            "time_complexity": "O(n^2)",
+            "space_complexity": "O(1)",
+            "hints": ["Consider using nested loops"],
+            "learning_points": ["Array traversal", "Brute force approach"],
+        }
 
         prompt = f"""Generate {num_questions} {difficulty.value} coding {topic_prompt} questions in {programming_language}.
         The questions should align with the following difficulty parameters:
@@ -311,21 +426,20 @@ def generate_coding_question(
         - Expected Solving Time: {difficulty_params.expected_time}
         - Constraints: {json.dumps(difficulty_params.constraints, indent=2)}
 
-        Your response must be a valid JSON object with a 'questions' key containing an array of question objects.
-        Each question object should have:
-        - 'title': A short descriptive title
-        - 'difficulty': The difficulty level with explanation
-        - 'description': Detailed problem description including constraints and examples
-        - 'function_signature': The required function signature/template
-        - 'test_cases': Array of test cases with input and expected output
-        - 'solution': A sample solution
-        - 'time_complexity': Expected time complexity
-        - 'space_complexity': Expected space complexity
-        - 'hints': Array of helpful hints (optional)
-        - 'learning_points': Key concepts and patterns used in the solution
+        Your response must follow this exact JSON structure (using the example format below):
+
+        {json.dumps({"questions": [sample_question]}, indent=2)}
+
+        IMPORTANT REQUIREMENTS:
+        1. Each question must follow the exact structure shown above
+        2. All test cases must have 'input' as an object with named parameters
+        3. The 'expected' field in test cases must match the function's return type
+        4. Include at least 3 test cases per question, including edge cases
+        5. The function signature must match the programming language syntax
+        6. All JSON must be valid and properly formatted
 
         Use appropriate syntax and conventions for {programming_language}.
-        Include comprehensive test cases covering edge cases.
+        Ensure all test cases are properly formatted as objects with named parameters.
         """
 
         try:
@@ -337,18 +451,19 @@ def generate_coding_question(
 
         try:
             questions_data = json.loads(response.response)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=500,
-                detail="Failed to parse the generated questions. Invalid JSON format.",
+                detail=f"Failed to parse the generated questions. Invalid JSON format. Error: {str(e)}",
             )
 
         # Validate response structure
         if not isinstance(questions_data, dict) or "questions" not in questions_data:
             raise ValueError("Response is missing required 'questions' field")
 
-        # Validate each question
-        for question in questions_data["questions"]:
+        # Validate and clean each question
+        for i, question in enumerate(questions_data["questions"]):
+            # Check required fields
             required_fields = [
                 "title",
                 "difficulty",
@@ -364,13 +479,46 @@ def generate_coding_question(
             ]
             if missing_fields:
                 raise ValueError(
-                    f"Question missing required fields: {', '.join(missing_fields)}"
+                    f"Question {i+1} missing required fields: {', '.join(missing_fields)}"
                 )
 
-            if question["difficulty"]["level"] != difficulty.value:
+            # Validate test cases
+            if not isinstance(question["test_cases"], list):
+                raise ValueError(f"Question {i+1}: Test cases must be an array")
+
+            cleaned_test_cases = []
+            for j, test_case in enumerate(question["test_cases"]):
+                if not isinstance(test_case, dict):
+                    raise ValueError(
+                        f"Question {i+1}, Test case {j+1}: Must be an object"
+                    )
+
+                if "input" not in test_case or "expected" not in test_case:
+                    raise ValueError(
+                        f"Question {i+1}, Test case {j+1}: Must have 'input' and 'expected' fields"
+                    )
+
+                # Ensure input is a dictionary
+                if not isinstance(test_case["input"], dict):
+                    raise ValueError(
+                        f"Question {i+1}, Test case {j+1}: Input must be an object with named parameters"
+                    )
+
+                # Add cleaned test case
+                cleaned_test_cases.append(
+                    {"input": test_case["input"], "expected": test_case["expected"]}
+                )
+
+            # Replace test cases with cleaned version
+            question["test_cases"] = cleaned_test_cases
+
+            # Validate difficulty format
+            if (
+                not isinstance(question["difficulty"], dict)
+                or "level" not in question["difficulty"]
+            ):
                 raise ValueError(
-                    f"Question difficulty '{question['difficulty']['level']}' "
-                    f"does not match requested level: {difficulty.value}"
+                    f"Question {i+1}: Difficulty must be an object with a 'level' field"
                 )
 
         return questions_data
@@ -466,6 +614,7 @@ Return the evaluation as a valid JSON object.
 
         try:
             evaluation_data = json.loads(response.response)
+            print(evaluation_data)
         except json.JSONDecodeError:
             raise HTTPException(
                 status_code=500,
