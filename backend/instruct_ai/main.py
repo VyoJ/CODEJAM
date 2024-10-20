@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from io import BytesIO
 from utils.pipeline import (
     generate_questions,
     evaluate_answer,
@@ -58,10 +59,11 @@ async def api_evaluate_answer(submission: AnswerSubmission):
 
 
 @app.post("/uploadfile/")
-async def upload_file(request: FileSchema):
-    # Step 3: Handle file upload and processing
-    # Here, you can save, process, or analyze the uploaded file
-    # For simplicity, we'll just return the file details
+async def upload_file(request: FileSchema = File(...)):
+    if request.content_type != 'application/pdf':
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+    contents = await request.read()
+    pdf_io = BytesIO(contents)
     return {"filename": request.course_name}
 
 
