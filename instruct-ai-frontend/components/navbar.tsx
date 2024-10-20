@@ -7,21 +7,21 @@ import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 
 export function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { status } = useSession();
 
-  const navItems = [
-    { href: "/assessment", label: "Assessment Demo" }
-  ];
+  const navItems = [{ href: "/assessment", label: "Assessment Demo" }];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="px-4 flex h-16 items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="font-bold text-xl">PESU I/O Course</span>
+            <span className="font-bold text-xl">Instruct AI</span>
           </Link>
           <nav className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
@@ -41,6 +41,14 @@ export function Navbar() {
         </div>
         <div className="flex items-center space-x-4">
           <ModeToggle />
+          {status === "authenticated" ? (
+            <Button onClick={() => signOut()}>Sign Out</Button>
+          ) : (
+            <Link href="/login">
+              <Button>Log In</Button>
+            </Link>
+          )}
+
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="md:hidden">

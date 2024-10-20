@@ -1,6 +1,11 @@
 from fastapi import HTTPException
 import os
 import json
+from fastapi import HTTPException
+from typing import Dict, List, Optional, Literal, Union
+from enum import Enum
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 from llama_index.core import (
     SimpleDirectoryReader,
     VectorStoreIndex,
@@ -20,10 +25,10 @@ load_dotenv()
 Settings.llm = Groq(model="llama-3.1-70b-versatile", api_key=os.getenv("GROQ_API_KEY"))
 Settings.embed_model = JinaEmbedding(
     api_key=os.getenv("JINA_API_KEY"),
-    model="jina-embeddings-v2-base-en",
+    model="jina-embeddings-v3",
 )
 
-PDF_PATH = "data/course_data.pdf"
+PDF_PATH = "data/SE_Merged.pdf"
 INDEX_PATH = "saved_index"
 
 
@@ -169,3 +174,323 @@ Ensure that your response is always a valid JSON object before submitting.
         raise HTTPException(
             status_code=500, detail=f"Error in answer evaluation: {str(e)}"
         )
+
+
+class TestCase(TypedDict):
+    input: Union[List, Dict, str, int, float]
+    expected: Union[List, Dict, str, int, float]
+
+
+class DifficultyLevel(str, Enum):
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+
+class DifficultyParameters(BaseModel):
+    time_complexity: List[str]
+    typical_concepts: List[str]
+    expected_time: str
+    constraints: Dict[str, str]
+
+
+def get_difficulty_parameters(difficulty: DifficultyLevel) -> DifficultyParameters:
+    """
+    Returns parameter guidelines based on difficulty level.
+    """
+    difficulty_params = {
+        DifficultyLevel.EASY: DifficultyParameters(
+            time_complexity=["O(1)", "O(n)"],
+            typical_concepts=[
+                "Basic array operations",
+                "Simple string manipulation",
+                "Basic math operations",
+                "If-else conditions",
+                "Basic loops",
+            ],
+            expected_time="10-15 minutes",
+            constraints={
+                "input_size": "n ≤ 1000",
+                "time_limit": "1 second",
+                "space_complexity": "O(1) to O(n)",
+            },
+        ),
+        DifficultyLevel.MEDIUM: DifficultyParameters(
+            time_complexity=["O(n)", "O(n log n)"],
+            typical_concepts=[
+                "Two pointers",
+                "Hash tables",
+                "Binary search",
+                "Basic graph algorithms",
+                "Basic dynamic programming",
+            ],
+            expected_time="20-30 minutes",
+            constraints={
+                "input_size": "n ≤ 10^5",
+                "time_limit": "2 seconds",
+                "space_complexity": "O(n)",
+            },
+        ),
+        DifficultyLevel.HARD: DifficultyParameters(
+            time_complexity=["O(n log n)", "O(n^2)", "O(2^n)"],
+            typical_concepts=[
+                "Advanced dynamic programming",
+                "Complex graph algorithms",
+                "Tree algorithms",
+                "Advanced data structures",
+                "Mathematical algorithms",
+            ],
+            expected_time="30-45 minutes",
+            constraints={
+                "input_size": "n ≤ 10^6",
+                "time_limit": "3 seconds",
+                "space_complexity": "Problem specific",
+            },
+        ),
+    }
+    return difficulty_params[difficulty]
+
+
+def validate_programming_language(language: str) -> str:
+    """
+    Validates and normalizes programming language input.
+    """
+    supported_languages = {
+        "python": "Python",
+        "javascript": "JavaScript",
+        "java": "Java",
+        "cpp": "C++",
+        "c++": "C++",
+        "c": "C",
+        "csharp": "C#",
+        "c#": "C#",
+    }
+    normalized = language.lower().strip()
+    if normalized not in supported_languages:
+        raise ValueError(f"Unsupported programming language: {language}")
+    return supported_languages[normalized]
+
+
+def generate_coding_question(
+    agent,
+    programming_language: str,
+    difficulty: DifficultyLevel,
+    topic: Optional[str] = None,
+    num_questions: int = 1,
+) -> Dict:
+    """
+    Generate coding questions with test cases and solution templates.
+
+    Args:
+        agent: The LLM agent to use for generation
+        programming_language: Target programming language
+        difficulty: DifficultyLevel (easy/medium/hard)
+        topic: Specific programming topic (optional)
+        num_questions: Number of questions to generate (default: 1)
+
+    Returns:
+        Dict containing generated questions with test cases
+
+    Raises:
+        HTTPException: If question generation or parsing fails
+        ValueError: If input parameters are invalid
+    """
+    try:
+        # Input validation
+        if num_questions < 1 or num_questions > 10:
+            raise ValueError("Number of questions must be between 1 and 10")
+
+        programming_language = validate_programming_language(programming_language)
+        difficulty_params = get_difficulty_parameters(difficulty)
+        topic_prompt = f"about {topic}" if topic else ""
+
+        prompt = f"""Generate {num_questions} {difficulty.value} coding {topic_prompt} questions in {programming_language}.
+        The questions should align with the following difficulty parameters:
+        - Time Complexity Target: {', '.join(difficulty_params.time_complexity)}
+        - Typical Concepts: {', '.join(difficulty_params.typical_concepts)}
+        - Expected Solving Time: {difficulty_params.expected_time}
+        - Constraints: {json.dumps(difficulty_params.constraints, indent=2)}
+
+        Your response must be a valid JSON object with a 'questions' key containing an array of question objects.
+        Each question object should have:
+        - 'title': A short descriptive title
+        - 'difficulty': The difficulty level with explanation
+        - 'description': Detailed problem description including constraints and examples
+        - 'function_signature': The required function signature/template
+        - 'test_cases': Array of test cases with input and expected output
+        - 'solution': A sample solution
+        - 'time_complexity': Expected time complexity
+        - 'space_complexity': Expected space complexity
+        - 'hints': Array of helpful hints (optional)
+        - 'learning_points': Key concepts and patterns used in the solution
+
+        Use appropriate syntax and conventions for {programming_language}.
+        Include comprehensive test cases covering edge cases.
+        """
+
+        try:
+            response = agent.chat(prompt)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to generate questions: {str(e)}"
+            )
+
+        try:
+            questions_data = json.loads(response.response)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to parse the generated questions. Invalid JSON format.",
+            )
+
+        # Validate response structure
+        if not isinstance(questions_data, dict) or "questions" not in questions_data:
+            raise ValueError("Response is missing required 'questions' field")
+
+        # Validate each question
+        for question in questions_data["questions"]:
+            required_fields = [
+                "title",
+                "difficulty",
+                "description",
+                "function_signature",
+                "test_cases",
+                "solution",
+                "time_complexity",
+                "space_complexity",
+            ]
+            missing_fields = [
+                field for field in required_fields if field not in question
+            ]
+            if missing_fields:
+                raise ValueError(
+                    f"Question missing required fields: {', '.join(missing_fields)}"
+                )
+
+            if question["difficulty"]["level"] != difficulty.value:
+                raise ValueError(
+                    f"Question difficulty '{question['difficulty']['level']}' "
+                    f"does not match requested level: {difficulty.value}"
+                )
+
+        return questions_data
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+def evaluate_coding_answer(
+    agent, question: Dict, user_code: str, programming_language: str
+) -> Dict:
+    """
+    Evaluate a user's coding answer against test cases and provide feedback.
+
+    Args:
+        agent: The LLM agent to use for evaluation
+        question: The original question dictionary containing test cases
+        user_code: The user's submitted code
+        programming_language: The programming language of the solution
+
+    Returns:
+        Dict containing evaluation results and feedback
+
+    Raises:
+        HTTPException: If evaluation fails
+        ValueError: If input parameters are invalid
+    """
+    try:
+        # Input validation
+        if not user_code.strip():
+            raise ValueError("User code cannot be empty")
+
+        programming_language = validate_programming_language(programming_language)
+
+        # Validate question structure
+        required_fields = [
+            "difficulty",
+            "description",
+            "function_signature",
+            "test_cases",
+        ]
+        missing_fields = [field for field in required_fields if field not in question]
+        if missing_fields:
+            raise ValueError(
+                f"Question missing required fields: {', '.join(missing_fields)}"
+            )
+
+        difficulty_params = get_difficulty_parameters(
+            DifficultyLevel(question["difficulty"]["level"])
+        )
+
+        prompt = f"""Evaluate the following coding solution:
+Programming Language: {programming_language}
+
+Question:
+{question['description']}
+
+Difficulty Level: {question['difficulty']['level']}
+Expected Time Complexity: {question.get('time_complexity', 'Not specified')}
+Expected Space Complexity: {question.get('space_complexity', 'Not specified')}
+
+Expected Function Signature:
+{question['function_signature']}
+
+User's Solution:
+{user_code}
+
+Test Cases:
+{json.dumps(question['test_cases'], indent=2)}
+
+Difficulty Parameters:
+{json.dumps(difficulty_params.dict(), indent=2)}
+
+Provide a comprehensive evaluation including:
+1. Test case results
+2. Time and space complexity analysis
+3. Code style and best practices
+4. Error handling
+5. Edge cases coverage
+6. Language-specific feedback
+
+Return the evaluation as a valid JSON object.
+"""
+
+        try:
+            response = agent.chat(prompt)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to evaluate answer: {str(e)}"
+            )
+
+        try:
+            evaluation_data = json.loads(response.response)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to parse evaluation results. Invalid JSON format.",
+            )
+
+        # Validate evaluation data
+        required_fields = [
+            "passed",
+            "test_results",
+            "feedback",
+            "score",
+            "difficulty_appropriate",
+        ]
+        missing_fields = [
+            field for field in required_fields if field not in evaluation_data
+        ]
+        if missing_fields:
+            raise ValueError(
+                f"Evaluation missing required fields: {', '.join(missing_fields)}"
+            )
+
+        return evaluation_data
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
